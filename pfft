@@ -1,0 +1,18 @@
+#!/usr/bin/env python
+
+import subprocess
+
+print 'pfft!'
+
+compiler = dict(exe='clang-3.8',
+                includes=['/usr/include/python2.7'])
+
+
+def compile(src, trg, compiler):
+    subprocess.check_output([compiler['exe']] + ['-I%s' % k for k in compiler['includes']] + ['-c', src, '-o', trg])
+
+def cpp_obj(src, trg, compiler):
+    compile(src, trg, compiler)
+
+
+cpp_obj("hello.cpp", "hello.o", compiler)
