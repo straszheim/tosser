@@ -7,4 +7,4 @@ void hello() {
 }
 
 
-//const double S::d;
+const double S::d;

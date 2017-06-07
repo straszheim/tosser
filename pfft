@@ -1,8 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-import subprocess
-
-print 'pfft!'
+import subprocess, os
 
 clang38 = dict(exe='clang-3.8',
                includes=['/usr/include/python2.7'],
@@ -11,8 +9,16 @@ clang38 = dict(exe='clang-3.8',
 
 
 def subexec(tag, args):
-    print "%10s %s" % (tag, ' '.join(args))
-    print subprocess.check_output(args)
+    print("%-10s %s" % (tag, ' '.join(args)),)
+    cproc = subprocess.run(args)
+    print(cproc)
+
+def buildstep(inputs, outputs, fn):
+    maxin = max([os.stat(i) for i in inputs])
+    minout = min([os.stat(o) for o in outputs])
+    if maxin >= minout:
+        fn()
+
 
 def compile(src, trg, compiler):
     args = [compiler['exe']] + ['-I%s' % k for k in compiler['includes']] + compiler['cppflags'] + ['-c', src, '-o', trg]
@@ -23,10 +29,10 @@ def link(src, trg, compiler):
     subexec("link", args)
 
 def cpp_obj(src, trg, compiler):
-    compile(src, trg, compiler=compiler)
+    buildstep([src], [trg], lambda: compile(src, trg, compiler=compiler))
 
-def cpp_exe(src, trg, compiler):
-    link(src, trg, compiler=compiler)
+def cpp_exe(objs, trg, compiler):
+    buildstep(objs, [trg], lambda: link(objs, trg, compiler=compiler))
 
 cpp_obj("hello.cpp", "hello.o", compiler=clang38)
 cpp_obj("main.cpp", "main.o", compiler=clang38)
