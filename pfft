@@ -4,15 +4,33 @@ import subprocess
 
 print 'pfft!'
 
-compiler = dict(exe='clang-3.8',
-                includes=['/usr/include/python2.7'])
+clang38 = dict(exe='clang-3.8',
+               includes=['/usr/include/python2.7'],
+               cppflags=['-std=c++14'],
+               ldflags=['-lstdc++'])
 
+
+def subexec(tag, args):
+    print "%10s %s" % (tag, ' '.join(args))
+    print subprocess.check_output(args)
 
 def compile(src, trg, compiler):
-    subprocess.check_output([compiler['exe']] + ['-I%s' % k for k in compiler['includes']] + ['-c', src, '-o', trg])
+    args = [compiler['exe']] + ['-I%s' % k for k in compiler['includes']] + compiler['cppflags'] + ['-c', src, '-o', trg]
+    subexec("compile", args)
+
+def link(src, trg, compiler):
+    args = [compiler['exe']] + src + ['-o', trg] + compiler['ldflags']
+    subexec("link", args)
 
 def cpp_obj(src, trg, compiler):
-    compile(src, trg, compiler)
+    compile(src, trg, compiler=compiler)
 
+def cpp_exe(src, trg, compiler):
+    link(src, trg, compiler=compiler)
 
-cpp_obj("hello.cpp", "hello.o", compiler)
+cpp_obj("hello.cpp", "hello.o", compiler=clang38)
+cpp_obj("main.cpp", "main.o", compiler=clang38)
+
+cpp_exe(["hello.o", "main.o"], "hello", compiler=clang38)
+
+subexec("runit", ["./hello"])
