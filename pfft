@@ -3,22 +3,32 @@
 import subprocess, os
 
 clang38 = dict(exe='clang-3.8',
-               includes=['/usr/include/python2.7'],
-               cppflags=['-std=c++14'],
-               ldflags=['-lstdc++'])
-
+               includes=['/usr/include/python3.5',
+                         'pybind11/include'],
+               cppflags=['-std=c++14', '-fPIC'],
+               ldflags=['-lstdc++'],
+               ldflags_shared=['-shared'],
+)
 
 def subexec(tag, args):
     print("%-10s %s" % (tag, ' '.join(args)),)
     cproc = subprocess.run(args)
     print(cproc)
 
-def buildstep(inputs, outputs, fn):
-    maxin = max([os.stat(i) for i in inputs])
-    minout = min([os.stat(o) for o in outputs])
-    if maxin >= minout:
-        fn()
+def opt_mtime(fname):
+    try:
+        modtime = os.stat(fname).st_mtime
+    except:
+        modtime = 0.0
+    return modtime
 
+def buildstep(inputs, outputs, fn):
+    maxin = max([opt_mtime(i) for i in inputs])
+    minout = min([opt_mtime(o) for o in outputs])
+    if maxin > minout:
+        fn()
+    else:
+        print("{} up to date w.r.t. {}".format(outputs, inputs))
 
 def compile(src, trg, compiler):
     args = [compiler['exe']] + ['-I%s' % k for k in compiler['includes']] + compiler['cppflags'] + ['-c', src, '-o', trg]
@@ -28,14 +38,27 @@ def link(src, trg, compiler):
     args = [compiler['exe']] + src + ['-o', trg] + compiler['ldflags']
     subexec("link", args)
 
+def link_shared(src, trg, compiler):
+    args = [compiler['exe']] + src + ['-o', trg] + compiler['ldflags'] + compiler['ldflags_shared']
+    subexec("link_so", args)
+
 def cpp_obj(src, trg, compiler):
     buildstep([src], [trg], lambda: compile(src, trg, compiler=compiler))
 
 def cpp_exe(objs, trg, compiler):
     buildstep(objs, [trg], lambda: link(objs, trg, compiler=compiler))
 
+def cpp_so(objs, trg, compiler):
+    buildstep(objs, [trg], lambda: link_shared(objs, trg, compiler=compiler))
+
 cpp_obj("hello.cpp", "hello.o", compiler=clang38)
 cpp_obj("main.cpp", "main.o", compiler=clang38)
+cpp_obj("pfft.cpp", "pfft.o", compiler=clang38)
 cpp_exe(["hello.o", "main.o"], "hello", compiler=clang38)
 
+cpp_so(["pfft.o"], "pfft.so", compiler=clang38)
+
 subexec("runit", ["./hello"])
+
+import pfft
+print("calling pfft built pybindings: {}".format(pfft.funcy()))
