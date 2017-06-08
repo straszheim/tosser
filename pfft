@@ -36,7 +36,6 @@ def cpp_exe(objs, trg, compiler):
 
 cpp_obj("hello.cpp", "hello.o", compiler=clang38)
 cpp_obj("main.cpp", "main.o", compiler=clang38)
-
 cpp_exe(["hello.o", "main.o"], "hello", compiler=clang38)
 
 subexec("runit", ["./hello"])
