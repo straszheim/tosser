@@ -11,8 +11,9 @@ def protocol_factory():
     log("protocol_factory!")
     return None
 
-async def hello_world():
+def hello_world():
     log("hello hello")
+    return 42
 
 clients = {}
 
@@ -32,8 +33,10 @@ async def handle_client(client_reader, client_writer):
     stuffs = await client_reader.readline()
     if stuffs is None:
         return
-    print("yay read %s" % stuffs.decode())
-    client_writer.write(b'YAH WHATEVER KTHXBYE\n')
+    log("yay read %s" % stuffs.decode())
+    res = eval(stuffs.decode())
+    log("evalled to %s", repr(res))
+    client_writer.write(repr(res).encode())
 
 def pfftserv(path):
     log("pfftserv on %s" % path)
@@ -53,10 +56,12 @@ def pfftclient(path):
     loop = asyncio.get_event_loop()
     [reader, writer] = loop.run_until_complete(asyncio.open_unix_connection(path))
     log("wrote stuffs")
-    writer.write(b'GEEEETT SOME')
-    reply = reader.readline()
-    asyncio.ensure_future(reply)
+    writer.write(b'17*999.1\n')
+    reply = loop.run_until_complete(reader.readline())
+    # asyncio.ensure_future(reply)
     log("reply is %s" % reply)
+    rslt = eval(reply.decode())
+    log("result is %s (%s)" % (repr(rslt), type(rslt)))
     #r = await reply
     #log("r is %s" % r)
     # loop.run_until_complete(cli)
