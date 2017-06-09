@@ -1,0 +1,7 @@
+#!/usr/bin/env python3
+
+from pfft import *
+
+cli = pfftclient("hello.sock")
+
+cli.send("wtf")
