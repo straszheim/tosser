@@ -1,9 +1,9 @@
 import asyncio, logging, os, socket
 
 os.environ['PYTHONASYNCIODEBUG'] = '1'
-FORMAT = '... %(message)s'
+FORMAT = '... %(module)s:%(lineno)d] %(message)s'
 logging.basicConfig(format=FORMAT)
-logging.getLogger('asyncio').setLevel(logging.DEBUG)
+logging.getLogger('').setLevel(logging.DEBUG)
 
 log = logging.getLogger('asyncio').debug
 
@@ -14,21 +14,36 @@ def protocol_factory():
 async def hello_world():
     log("hello hello")
 
-async def client_connected_cb(client_reader, client_writer):
+clients = {}
+
+def accept_client(client_reader, client_writer):
+    task = asyncio.Task(handle_client(client_reader, client_writer))
+    clients[task] = (client_reader, client_writer)
+    def client_done(task):
+        del clients[task]
+        client_writer.close()
+        log("done connection")
+
+    log("new connection")
+    task.add_done_callback(client_done)
+
+async def handle_client(client_reader, client_writer):
     log("************** client_connected_cb!  %s %s" % (client_reader,client_writer))
-    stuffs = await client_reader.read()
-    print("yay read %s" % stuffs)
-    client_writer.write(b'YAH WHATEVER KTHXBYE\n\n\n\n')
+    stuffs = await client_reader.readline()
+    if stuffs is None:
+        return
+    print("yay read %s" % stuffs.decode())
+    client_writer.write(b'YAH WHATEVER KTHXBYE\n')
 
 def pfftserv(path):
-    log("SERV!")
-    log("pfftserv starting")
+    log("pfftserv on %s" % path)
     loop = asyncio.get_event_loop()
 
     if (os.path.exists(path)):
         os.unlink(path)
 
-    loop.run_until_complete(asyncio.start_unix_server(client_connected_cb, path=path))
+    f = asyncio.start_unix_server(accept_client, path=path)
+    loop.run_until_complete(f)
     loop.run_forever()
     loop.close()
 
